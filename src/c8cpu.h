@@ -6,10 +6,10 @@
 struct Instruction;
 typedef struct Instruction Instruction;
 
-void load_program(FILE *program);
+signed int load_program(FILE *program);
 void run_cpu();
 uint16_t fetch();
 Instruction decode(uint16_t op);
-void execute(Instruction instruction);
+void execute(Instruction *instruction);
 
 #endif

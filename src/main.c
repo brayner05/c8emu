@@ -6,9 +6,18 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    // FILE *program = fopen(argv[1], "rb");
-    load_program(NULL);
-    // fclose(program);
+    FILE *program = fopen(argv[1], "rb");
+    if (program == NULL) {
+        perror("Error");
+        return -1;
+    }
+
+    if (load_program(program) < 0) {
+        puts("File is to large");
+        return -1;
+    }
+
+    fclose(program);
 
     run_cpu();
 }
