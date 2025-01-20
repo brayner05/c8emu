@@ -240,6 +240,9 @@ static op_function OPERATIONS[NUM_OPCODES] = {
     [0xf] = get_delay
 };
 
+/**
+ * 
+ */
 signed int load_program(FILE *program) {
     fseek(program, 0L, SEEK_END);
     size_t program_size = ftell(program);
