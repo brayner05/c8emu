@@ -1,8 +1,13 @@
+#include <SDL2/SDL.h>
 #include "c8cpu.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Usage: %s [CHIP-8 ROM]\n", argv[0]);
+        return -1;
+    }
+
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         return -1;
     }
 
@@ -18,6 +23,6 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(program);
-
     run_cpu();
+    SDL_Quit();
 }

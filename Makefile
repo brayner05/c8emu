@@ -11,7 +11,7 @@ TARGET = $(BIN)/c8emu
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ -lSDL2main -lSDL2
 
 $(BIN)/%.o: $(SRC)/%.c
 	mkdir -p -v bin

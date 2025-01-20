@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <SDL2/SDL.h>
 #include "c8cpu.h"
 
 // Magic Number Definitions
@@ -9,6 +10,8 @@
 #define PROGRAM_START   0x200
 #define NUM_OPCODES     0x20
 #define OP_SIZE         0x02
+#define DISPLAY_WIDTH   64
+#define DISPLAY_HEIGHT  32
 
 
 typedef struct Instruction {
@@ -20,8 +23,10 @@ typedef struct Instruction {
 typedef void (*op_function)(Instruction*);
 
 // CPU registers and memory
-static uint8_t MEMORY[MEM_SIZE];
-static uint8_t REGISTERS[NUM_REGISTERS];
+static int8_t MEMORY[MEM_SIZE];
+static int8_t REGISTERS[NUM_REGISTERS];
+static SDL_Window *DISPLAY = NULL;
+static SDL_Renderer *RENDERER = NULL;
 static uint16_t PC = PROGRAM_START;
 static uint16_t SP = PROGRAM_START - 1;
 static uint16_t I  = 0;
@@ -184,7 +189,19 @@ static void generate_random(Instruction *instruction) {
  * a given number.
  */
 static void draw(Instruction *instruction) {
-    puts("DRAW!!!");
+    int8_t x_pos = (instruction->operands & 0x0f00) >> 8;
+    int8_t y_pos = (instruction->operands & 0x00f0) >> 4;
+    int8_t height = instruction->operands & 0x000f;
+
+    SDL_Rect sprite = (SDL_Rect) {
+        .x = x_pos,
+        .y = y_pos,
+        .w = 8,
+        .h = height
+    };
+
+    SDL_RenderDrawRect(RENDERER, &sprite);
+    SDL_RenderPresent(RENDERER);
 }
 
 /**
@@ -249,16 +266,32 @@ static void print_vm_debug_info() {
     puts("\n");
 }
 
+static int init_display() {
+    SDL_CreateWindowAndRenderer(
+        DISPLAY_WIDTH, DISPLAY_HEIGHT, SDL_WINDOW_SHOWN, &DISPLAY, &RENDERER);
+}
+
 void run_cpu() {
     srand(time(NULL));
-    while (1) {
+    init_display();
+
+    _Bool running = (_Bool) 1;
+    while (running) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                running = (_Bool) 0;
+            }
+        }
         uint16_t op = fetch();
         if (op == 0) break;
         Instruction instruction = decode(op);
         execute(&instruction);
         print_vm_debug_info();
     }
-    
+
+    SDL_DestroyWindow(DISPLAY);
+    SDL_DestroyRenderer(RENDERER);
 }
 
 uint16_t fetch() {
@@ -277,8 +310,9 @@ Instruction decode(uint16_t op) {
 }
 
 void execute(Instruction *instruction) {
+    // Clear screen
     if (instruction->raw == 0x00e0) {
-        // clear screen
+        SDL_RenderClear(RENDERER);
         return;
     }
 
@@ -288,6 +322,7 @@ void execute(Instruction *instruction) {
         return;
     }
 
+    printf("0x%x\n", instruction->raw);
     op_function match = OPERATIONS[instruction->opcode];
     match(instruction);
 }
