@@ -3,6 +3,7 @@
 #include <time.h>
 #include "c8cpu.h"
 
+// Magic Number Definitions
 #define MEM_SIZE        4096
 #define NUM_REGISTERS   0x10
 #define PROGRAM_START   0x200
@@ -18,6 +19,7 @@ typedef struct Instruction {
 
 typedef void (*op_function)(Instruction*);
 
+// CPU registers and memory
 static uint8_t MEMORY[MEM_SIZE];
 static uint8_t REGISTERS[NUM_REGISTERS];
 static uint16_t PC = PROGRAM_START;
@@ -164,10 +166,45 @@ static void jmp_v0_offset(Instruction *instruction) {
     PC = REGISTERS[0] + address;
 }
 
+/**
+ * 0xc
+ * Generates a random number, performs a bitwise and with a given constant,
+ * and then stores the result in the given register.
+ */
 static void generate_random(Instruction *instruction) {
+    uint8_t vx = (instruction->operands & 0x0f00) >> 8;
+    uint8_t constant = instruction->operands & 0x00ff;
+    uint8_t random_number = (uint8_t) rand();
+    REGISTERS[vx] = random_number & constant;
+}
+
+/**
+ * 0xd
+ * Draws a sprite at (Vx, Vy) with a width of 8 pixels and a height of
+ * a given number.
+ */
+static void draw(Instruction *instruction) {
+    puts("DRAW!!!");
+}
+
+/**
+ * 0xe
+ * Skips the next instruction if the key stored in Vx is pressed.
+ */
+static void skip_if_key_pressed(Instruction *instruction) {
+    uint8_t vx = (instruction->operands & 0x0f00) >> 8;
+    // Implement with SDL and this should also handle not pressed
+}
+
+/**
+ * 0xf
+ * Stores the value of the delay timer in Vx
+ */
+static void get_delay(Instruction *instruction) {
 
 }
 
+// Map opcodes to their respective handlers
 static op_function OPERATIONS[NUM_OPCODES] = {
     [0x1] = jmp_addr,
     [0x2] = call_subroutine,
@@ -179,7 +216,11 @@ static op_function OPERATIONS[NUM_OPCODES] = {
     [0x8] = compute_operation,
     [0x9] = skip_neq_register,
     [0xa] = set_i_register,
-    [0xb] = jmp_v0_offset
+    [0xb] = jmp_v0_offset,
+    [0xc] = generate_random,
+    [0xd] = draw,
+    [0xe] = skip_if_key_pressed,
+    [0xf] = get_delay
 };
 
 signed int load_program(FILE *program) {
@@ -199,11 +240,11 @@ static void print_vm_debug_info() {
     printf("PC: %lu, SP: %lu, (SP): %u\n", PC, SP, MEMORY[SP]);
     puts("Registers\n==============");
     for (size_t i = 0; i < NUM_REGISTERS; ++i) {
-        printf("  %u ", REGISTERS[i]);
+        printf("  %lu ", (size_t) REGISTERS[i]);
     }
     puts("");
     for (size_t i = 0; i < NUM_REGISTERS; ++i) {
-        printf(" v%u ", i);
+        printf(" v%lu ", i);
     }
     puts("\n");
 }
@@ -217,6 +258,7 @@ void run_cpu() {
         execute(&instruction);
         print_vm_debug_info();
     }
+    
 }
 
 uint16_t fetch() {
@@ -247,5 +289,5 @@ void execute(Instruction *instruction) {
     }
 
     op_function match = OPERATIONS[instruction->opcode];
-    match(&instruction);
+    match(instruction);
 }
