@@ -286,19 +286,6 @@ signed int load_program(FILE *program) {
     return 0;
 }
 
-static void print_vm_debug_info() {
-    printf("PC: %lu, SP: %lu, (SP): %u\n", PC, SP, MEMORY[SP]);
-    puts("Registers\n==============");
-    for (size_t i = 0; i < NUM_REGISTERS; ++i) {
-        printf("  %lu ", (size_t) REGISTERS[i]);
-    }
-    puts("");
-    for (size_t i = 0; i < NUM_REGISTERS; ++i) {
-        printf(" v%lu ", i);
-    }
-    puts("\n");
-}
-
 static int init_display() {
     return SDL_CreateWindowAndRenderer(
         DISPLAY_WIDTH * SCALING_FACTOR,
@@ -354,7 +341,7 @@ int run_cpu() {
     srand(time(NULL));
     if (init_display() < 0) {
         fputs("Failed to initialize display.", stderr);
-        return;
+        return -1;
     }
 
     while (running) {

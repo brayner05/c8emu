@@ -26,5 +26,5 @@ int main(int argc, char *argv[]) {
     int exit_status = run_cpu();
     SDL_Quit();
 
-    return exit_status;
+    printf("Exited with status %d.\n", exit_status);
 }
