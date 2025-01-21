@@ -29,9 +29,11 @@ typedef enum {
     KEY_D = (1 << 2)
 } KeyCodes;
 
+// I typedef'd a pointer
 typedef void (*op_function)(Instruction*);
 
 // CPU registers and memory
+static _Bool running = (_Bool) 1;
 static uint8_t MEMORY[MEM_SIZE];
 static uint8_t REGISTERS[NUM_REGISTERS];
 static SDL_Window *DISPLAY = NULL;
@@ -42,7 +44,7 @@ static uint16_t SP = PROGRAM_START - 1;
 static uint16_t I  = 0;
 
 /**
- * 0x1
+ * Opcode: 0x1
  * Jumps to a given address.
  */
 static void jmp_addr(Instruction *instruction) {
@@ -51,7 +53,7 @@ static void jmp_addr(Instruction *instruction) {
 }
 
 /**
- * 0x2
+ * Opcode: 0x2
  * Stores the current program counter on the stack and jumps to the given address.
  */
 static void call_subroutine(Instruction *instruction) {
@@ -61,7 +63,7 @@ static void call_subroutine(Instruction *instruction) {
 }
 
 /**
- * 0x3
+ * Opcode: 0x3
  * Skips the next instruction if Vn is equal to a given 4-bit constant
  */
 static void skip_eq_constant(Instruction *instruction) {
@@ -74,7 +76,7 @@ static void skip_eq_constant(Instruction *instruction) {
 }
 
 /**
- * 0x4
+ * Opcode: 0x4
  * Skips the next instruction if Vn is not equal to a given 4-bit constant
  */
 static void skip_neq_constant(Instruction *instruction) {
@@ -87,7 +89,7 @@ static void skip_neq_constant(Instruction *instruction) {
 }
 
 /**
- * 0x5
+ * Opcode: 0x5
  * Skips the next instruction if Vx is equal to Vy
  */
 static void skip_eq_register(Instruction *instruction) {
@@ -100,7 +102,7 @@ static void skip_eq_register(Instruction *instruction) {
 }
 
 /**
- * 0x6
+ * Opcode: 0x6
  * Stores a given constant in Vx
  */
 static void mov_constant(Instruction *instruction) {
@@ -110,7 +112,7 @@ static void mov_constant(Instruction *instruction) {
 }
 
 /**
- * 0x7
+ * Opcode: 0x7
  * Adds a constant to a register Vx
  */
 static void add_constant(Instruction *instruction) {
@@ -120,7 +122,7 @@ static void add_constant(Instruction *instruction) {
 }
 
 /**
- * 0x8
+ * Opcode: 0x8
  * Handles the following cases involving two registers:
  * `Vx = Vy`      (8XY0)
  * `Vx |= Vy`     (8XY1)
@@ -151,7 +153,7 @@ static void compute_operation(Instruction *instruction) {
 }
 
 /**
- * 0x9
+ * Opcode: 0x9
  * Skips the next instruction if Vx = Vy
  */
 static void skip_neq_register(Instruction *instruction) {
@@ -164,7 +166,7 @@ static void skip_neq_register(Instruction *instruction) {
 }
 
 /**
- * 0xa
+ * Opcode: 0xa
  * Sets the I register to a given address.
  */
 static void set_i_register(Instruction *instruction) {
@@ -173,7 +175,7 @@ static void set_i_register(Instruction *instruction) {
 }
 
 /**
- * 0xb
+ * Opcode: 0xb
  * Jumps to the address stored in V0 + a given offset
  */
 static void jmp_v0_offset(Instruction *instruction) {
@@ -182,7 +184,7 @@ static void jmp_v0_offset(Instruction *instruction) {
 }
 
 /**
- * 0xc
+ * Opcode: 0xc
  * Generates a random number, performs a bitwise and with a given constant,
  * and then stores the result in the given register.
  */
@@ -194,7 +196,7 @@ static void generate_random(Instruction *instruction) {
 }
 
 /**
- * 0xd
+ * Opcode: 0xd
  * Draws a sprite at (Vx, Vy) with a width of 8 pixels and a height of
  * a given number.
  */
@@ -216,10 +218,10 @@ static void draw(Instruction *instruction) {
 }
 
 /**
- * 0xe
+ * Opcode: 0xe
  * Skips the next instruction if the key stored in Vx is pressed.
  */
-static void skip_if_key_pressed(Instruction *instruction) {
+static void skip_on_key_event(Instruction *instruction) {
     uint8_t vx = (instruction->operands & 0x0f00) >> 8;
     uint8_t ending = instruction->operands & 0xff;
     
@@ -230,11 +232,18 @@ static void skip_if_key_pressed(Instruction *instruction) {
                 PC += OP_SIZE;
             }
             break;
+
+        // Skip if key in Vx is not pressed
+        case 0xa1:
+            if ((KEYS & (1 << REGISTERS[vx])) == 0) {
+                PC += OP_SIZE;
+            }
+            break;
     }
 }
 
 /**
- * 0xf
+ * Opcode: 0xf
  * Stores the value of the delay timer in Vx
  */
 static void get_delay(Instruction *instruction) {
@@ -256,7 +265,7 @@ static op_function OPERATIONS[NUM_OPCODES] = {
     [0xb] = jmp_v0_offset,
     [0xc] = generate_random,
     [0xd] = draw,
-    [0xe] = skip_if_key_pressed,
+    [0xe] = skip_on_key_event,
     [0xf] = get_delay
 };
 
@@ -299,6 +308,9 @@ static int init_display() {
     );
 }
 
+/**
+ * Runs whenever a key is pressed
+ */
 static void handle_key_down(SDL_Event *key_event) {
     SDL_KeyCode key_code = key_event->key.keysym.sym;
     if (key_code == SDLK_w) KEYS |= KEY_W;
@@ -307,6 +319,9 @@ static void handle_key_down(SDL_Event *key_event) {
     if (key_code == SDLK_d) KEYS |= KEY_D;
 }
 
+/**
+ * Runs whenever a key is released
+ */
 static void handle_key_up(SDL_Event *key_event) {
     SDL_KeyCode key_code = key_event->key.keysym.sym;
     if (key_code == SDLK_w) KEYS &= ~KEY_W;
@@ -315,6 +330,27 @@ static void handle_key_up(SDL_Event *key_event) {
     if (key_code == SDLK_d) KEYS &= ~KEY_D;
 }
 
+/**
+ * Handle external events such as exiting, and key eventsOpcode: 
+ */
+static void process_events() {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            running = (_Bool) 0;
+        }
+        if (event.type == SDL_KEYDOWN) {
+            handle_key_down(&event);
+        }
+        if (event.type == SDL_KEYUP) {
+            handle_key_up(&event);
+        }
+    }
+}
+
+/**
+ * Initialize all CPU dependencies and start main loop.
+ */
 void run_cpu() {
     srand(time(NULL));
     if (init_display() < 0) {
@@ -322,26 +358,12 @@ void run_cpu() {
         return;
     }
 
-    _Bool running = (_Bool) 1;
     while (running) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = (_Bool) 0;
-            }
-            // print_binary(KEYS);
-            if (event.type == SDL_KEYDOWN) {
-                handle_key_down(&event);
-            }
-            if (event.type == SDL_KEYUP) {
-                handle_key_up(&event);
-            }
-        }
+        process_events();
         uint16_t op = fetch();
         if (op == 0) break;
         Instruction instruction = decode(op);
         execute(&instruction);
-        // print_vm_debug_info();
     }
 
     SDL_DestroyWindow(DISPLAY);
@@ -386,6 +408,6 @@ void execute(Instruction *instruction) {
         return;
     }
 
-    op_function match = OPERATIONS[instruction->opcode];
-    match(instruction);
+    op_function op_handler = OPERATIONS[instruction->opcode];
+    op_handler(instruction);
 }
