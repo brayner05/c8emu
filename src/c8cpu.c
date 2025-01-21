@@ -202,13 +202,13 @@ static void generate_random(Instruction *instruction) {
  * a given number.
  */
 static void draw(Instruction *instruction) {
-    int8_t x_pos = (instruction->operands & 0x0f00) >> 8;
-    int8_t y_pos = (instruction->operands & 0x00f0) >> 4;
+    int8_t vx = (instruction->operands & 0x0f00) >> 8;
+    int8_t vy = (instruction->operands & 0x00f0) >> 4;
     int8_t height = instruction->operands & 0x000f;
 
     SDL_Rect sprite = (SDL_Rect) {
-        .x = x_pos,
-        .y = y_pos,
+        .x = REGISTERS[vx],
+        .y = REGISTERS[vy],
         .w = 8 * SCALING_FACTOR,
         .h = height * SCALING_FACTOR
     };
