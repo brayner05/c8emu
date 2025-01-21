@@ -303,7 +303,7 @@ static int init_display() {
     return SDL_CreateWindowAndRenderer(
         DISPLAY_WIDTH * SCALING_FACTOR,
         DISPLAY_HEIGHT * SCALING_FACTOR, 
-        SDL_WINDOW_SHOWN, 
+        SDL_WINDOW_BORDERLESS, 
         &DISPLAY, 
         &RENDERER
     );
