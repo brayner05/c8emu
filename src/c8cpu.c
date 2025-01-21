@@ -11,6 +11,7 @@
 #define NUM_OPCODES     0x20
 #define OP_SIZE         0x02
 
+// Display constants
 static const int SCALING_FACTOR = 10;
 static const int DISPLAY_WIDTH = 64;
 static const int DISPLAY_HEIGHT = 32;
@@ -348,10 +349,8 @@ static void process_events() {
     }
 }
 
-/**
- * Initialize all CPU dependencies and start main loop.
- */
-void run_cpu() {
+
+int run_cpu() {
     srand(time(NULL));
     if (init_display() < 0) {
         fputs("Failed to initialize display.", stderr);
@@ -368,6 +367,9 @@ void run_cpu() {
 
     SDL_DestroyWindow(DISPLAY);
     SDL_DestroyRenderer(RENDERER);
+
+    // Exit code
+    return REGISTERS[0];
 }
 
 /**

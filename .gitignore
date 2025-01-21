@@ -1,3 +1,4 @@
 bin
-demo
+demo/*
+!demo/program.ch8
 a.out

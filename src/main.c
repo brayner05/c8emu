@@ -23,6 +23,8 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(program);
-    run_cpu();
+    int exit_status = run_cpu();
     SDL_Quit();
+
+    return exit_status;
 }
