@@ -372,18 +372,12 @@ int run_cpu() {
     return REGISTERS[0];
 }
 
-/**
- * Fetch the next instruction from memory.
- */
 uint16_t fetch() {
     uint16_t op = (MEMORY[PC] << 8) | MEMORY[PC + 1];
     PC += OP_SIZE;
     return op;
 }
 
-/**
- * Decode raw binary into an instruction.
- */
 Instruction decode(uint16_t op) {
     Instruction instruction = (Instruction) {
         .opcode = (op & 0xf000) >> 12,
@@ -393,9 +387,6 @@ Instruction decode(uint16_t op) {
     return instruction;
 }
 
-/**
- * Execute a decoded instruction.
- */
 void execute(Instruction *instruction) {
     // Clear screen
     if (instruction->raw == 0x00e0) {
