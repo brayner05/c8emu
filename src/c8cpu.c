@@ -207,8 +207,8 @@ static void draw(Instruction *instruction) {
     int8_t height = instruction->operands & 0x000f;
 
     SDL_Rect sprite = (SDL_Rect) {
-        .x = REGISTERS[vx],
-        .y = REGISTERS[vy],
+        .x = REGISTERS[vx] * SCALING_FACTOR,
+        .y = REGISTERS[vy] * SCALING_FACTOR,
         .w = 8 * SCALING_FACTOR,
         .h = height * SCALING_FACTOR
     };
@@ -350,6 +350,7 @@ int run_cpu() {
         if (op == 0) break;
         Instruction instruction = decode(op);
         execute(&instruction);
+        SDL_Delay(16);
     }
 
     SDL_DestroyWindow(DISPLAY);
@@ -382,7 +383,7 @@ void execute(Instruction *instruction) {
         return;
     }
 
-    // return
+    // Return from function
     if (instruction->raw == 0x00ee) {
         PC = MEMORY[SP++];
         return;

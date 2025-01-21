@@ -1,4 +1,5 @@
 bin
 demo/*
 !demo/program.ch8
+!demo/game.ch8
 a.out
