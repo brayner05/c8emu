@@ -10,8 +10,10 @@
 #define PROGRAM_START   0x200
 #define NUM_OPCODES     0x20
 #define OP_SIZE         0x02
-#define DISPLAY_WIDTH   64
-#define DISPLAY_HEIGHT  32
+
+static const int SCALING_FACTOR = 10;
+static const int DISPLAY_WIDTH = 64;
+static const int DISPLAY_HEIGHT = 32;
 
 
 typedef struct Instruction {
@@ -20,13 +22,21 @@ typedef struct Instruction {
     uint16_t raw;
 } Instruction;
 
+typedef enum {
+    KEY_W = (1 << 8),
+    KEY_A = (1 << 4),
+    KEY_S = (1 << 6),
+    KEY_D = (1 << 2)
+} KeyCodes;
+
 typedef void (*op_function)(Instruction*);
 
 // CPU registers and memory
-static int8_t MEMORY[MEM_SIZE];
-static int8_t REGISTERS[NUM_REGISTERS];
+static uint8_t MEMORY[MEM_SIZE];
+static uint8_t REGISTERS[NUM_REGISTERS];
 static SDL_Window *DISPLAY = NULL;
 static SDL_Renderer *RENDERER = NULL;
+static uint16_t KEYS = 0;
 static uint16_t PC = PROGRAM_START;
 static uint16_t SP = PROGRAM_START - 1;
 static uint16_t I  = 0;
@@ -196,11 +206,12 @@ static void draw(Instruction *instruction) {
     SDL_Rect sprite = (SDL_Rect) {
         .x = x_pos,
         .y = y_pos,
-        .w = 8,
-        .h = height
+        .w = 8 * SCALING_FACTOR,
+        .h = height * SCALING_FACTOR
     };
 
-    SDL_RenderDrawRect(RENDERER, &sprite);
+    SDL_SetRenderDrawColor(RENDERER, 0xff, 0xff, 0xff, 0xff);
+    SDL_RenderFillRect(RENDERER, &sprite);
     SDL_RenderPresent(RENDERER);
 }
 
@@ -210,7 +221,16 @@ static void draw(Instruction *instruction) {
  */
 static void skip_if_key_pressed(Instruction *instruction) {
     uint8_t vx = (instruction->operands & 0x0f00) >> 8;
-    // Implement with SDL and this should also handle not pressed
+    uint8_t ending = instruction->operands & 0xff;
+    
+    switch (ending) {
+        // Skip if key in Vx is pressed
+        case 0x9e:
+            if ((KEYS & (1 << REGISTERS[vx])) != 0) {
+                PC += OP_SIZE;
+            }
+            break;
+    }
 }
 
 /**
@@ -270,13 +290,37 @@ static void print_vm_debug_info() {
 }
 
 static int init_display() {
-    SDL_CreateWindowAndRenderer(
-        DISPLAY_WIDTH, DISPLAY_HEIGHT, SDL_WINDOW_SHOWN, &DISPLAY, &RENDERER);
+    return SDL_CreateWindowAndRenderer(
+        DISPLAY_WIDTH * SCALING_FACTOR,
+        DISPLAY_HEIGHT * SCALING_FACTOR, 
+        SDL_WINDOW_SHOWN, 
+        &DISPLAY, 
+        &RENDERER
+    );
+}
+
+static void handle_key_down(SDL_Event *key_event) {
+    SDL_KeyCode key_code = key_event->key.keysym.sym;
+    if (key_code == SDLK_w) KEYS |= KEY_W;
+    if (key_code == SDLK_a) KEYS |= KEY_A;
+    if (key_code == SDLK_s) KEYS |= KEY_S;
+    if (key_code == SDLK_d) KEYS |= KEY_D;
+}
+
+static void handle_key_up(SDL_Event *key_event) {
+    SDL_KeyCode key_code = key_event->key.keysym.sym;
+    if (key_code == SDLK_w) KEYS &= ~KEY_W;
+    if (key_code == SDLK_a) KEYS &= ~KEY_A;
+    if (key_code == SDLK_s) KEYS &= ~KEY_S;
+    if (key_code == SDLK_d) KEYS &= ~KEY_D;
 }
 
 void run_cpu() {
     srand(time(NULL));
-    init_display();
+    if (init_display() < 0) {
+        fputs("Failed to initialize display.", stderr);
+        return;
+    }
 
     _Bool running = (_Bool) 1;
     while (running) {
@@ -285,24 +329,37 @@ void run_cpu() {
             if (event.type == SDL_QUIT) {
                 running = (_Bool) 0;
             }
+            // print_binary(KEYS);
+            if (event.type == SDL_KEYDOWN) {
+                handle_key_down(&event);
+            }
+            if (event.type == SDL_KEYUP) {
+                handle_key_up(&event);
+            }
         }
         uint16_t op = fetch();
         if (op == 0) break;
         Instruction instruction = decode(op);
         execute(&instruction);
-        print_vm_debug_info();
+        // print_vm_debug_info();
     }
 
     SDL_DestroyWindow(DISPLAY);
     SDL_DestroyRenderer(RENDERER);
 }
 
+/**
+ * Fetch the next instruction from memory.
+ */
 uint16_t fetch() {
     uint16_t op = (MEMORY[PC] << 8) | MEMORY[PC + 1];
     PC += OP_SIZE;
     return op;
 }
 
+/**
+ * Decode raw binary into an instruction.
+ */
 Instruction decode(uint16_t op) {
     Instruction instruction = (Instruction) {
         .opcode = (op & 0xf000) >> 12,
@@ -312,9 +369,13 @@ Instruction decode(uint16_t op) {
     return instruction;
 }
 
+/**
+ * Execute a decoded instruction.
+ */
 void execute(Instruction *instruction) {
     // Clear screen
     if (instruction->raw == 0x00e0) {
+        SDL_SetRenderDrawColor(RENDERER, 0, 0, 0, 0xff);
         SDL_RenderClear(RENDERER);
         return;
     }
@@ -325,7 +386,6 @@ void execute(Instruction *instruction) {
         return;
     }
 
-    printf("0x%x\n", instruction->raw);
     op_function match = OPERATIONS[instruction->opcode];
     match(instruction);
 }
