@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <pthread.h>
 #include <SDL2/SDL.h>
 #include "c8cpu.h"
 
@@ -13,8 +14,8 @@
 
 // Display constants
 static const int SCALING_FACTOR = 10;
-static const int DISPLAY_WIDTH = 64;
-static const int DISPLAY_HEIGHT = 32;
+#define DISPLAY_WIDTH   64
+#define DISPLAY_HEIGHT  32
 
 
 typedef struct Instruction {
@@ -37,12 +38,15 @@ typedef void (*op_function)(Instruction*);
 static _Bool running = (_Bool) 1;
 static uint8_t MEMORY[MEM_SIZE];
 static uint8_t REGISTERS[NUM_REGISTERS];
-static SDL_Window *DISPLAY = NULL;
-static SDL_Renderer *RENDERER = NULL;
 static uint16_t KEYS = 0;
 static uint16_t PC = PROGRAM_START;
 static uint16_t SP = PROGRAM_START - 1;
 static uint16_t I  = 0;
+static SDL_Window *DISPLAY = NULL;
+static SDL_Renderer *RENDERER = NULL;
+static uint8_t GRAPHICS_BUFFER[DISPLAY_HEIGHT][DISPLAY_WIDTH] = {0};
+static pthread_t RENDER_THREAD;
+static pthread_mutex_t RENDER_MUTEX;
 
 /**
  * Opcode: 0x1
@@ -344,6 +348,7 @@ int run_cpu() {
         return -1;
     }
 
+    pthread_mutex_init(&RENDER_MUTEX, NULL);
     while (running) {
         process_events();
         uint16_t op = fetch();
@@ -355,6 +360,7 @@ int run_cpu() {
 
     SDL_DestroyWindow(DISPLAY);
     SDL_DestroyRenderer(RENDERER);
+    pthread_mutex_destroy(&RENDER_MUTEX);
 
     // Exit code
     return REGISTERS[0];
