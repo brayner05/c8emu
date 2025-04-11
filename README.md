@@ -20,7 +20,7 @@ Before installing C8Emu, ensure the following are installed on your system:
 ## Installation
 To install C8Emu, clone this repository.
 ```bash
-git clone https://github.com/brayner05/chip8-emulator.git
+git clone https://github.com/brayner05/c8emu.git
 ```
 Then ensure SDL2 is installed, and run:
 ```bash
